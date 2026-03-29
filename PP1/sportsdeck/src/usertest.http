@@ -1,0 +1,182 @@
+// For testing
+
+POST http://localhost:3000/api/auth/signup
+Content-Type: application/json
+
+{
+    "username": "user1",
+    "password": "password1",
+    "email": "test1@test.com",
+    "favoriteTeam": "Arsenal",
+    "avatar": 1
+}
+
+###
+
+POST http://localhost:3000/api/auth/signup
+Content-Type: application/json
+
+{
+    "username": "user2",
+    "password": "password2",
+    "email": "test2@test.com",
+    "favoriteTeam": "Arsenal",
+    "avatar": 1
+}
+
+###
+
+// Empty username
+POST http://localhost:3000/api/auth/signup
+Content-Type: application/json
+
+{
+    "username": null,
+    "password": "thisispassword",
+    "email": "test@test.com",
+    "favoriteTeam": "Arsenal",
+    "avatar": 1
+}
+
+###
+
+// Short password ( Should fail ) 
+
+POST http://localhost:3000/api/auth/signup
+Content-Type: application/json
+
+{
+    "username": "fail",
+    "password": "as",
+    "email": "fail@test.com",
+    "favoriteTeam": "Arsenal",
+    "avatar": 1
+}
+
+###
+
+// Duplicate username 
+
+POST http://localhost:3000/api/auth/signup
+Content-Type: application/json
+
+{
+    "username": "user1",
+    "password": "password1",
+    "email": "test4@test.com",
+    "favoriteTeam": "Arsenal",
+    "avatar": 1
+}
+
+### 
+
+// Duplicate email
+POST http://localhost:3000/api/auth/signup
+Content-Type: application/json
+
+{
+    "username": "user3",
+    "password": "password3",
+    "email": "test1@test.com",
+    "favoriteTeam": "Arsenal",
+    "avatar": 1
+}
+###
+
+
+// invalid email sign up returns 400
+POST http://localhost:3000/api/auth/signup
+Content-Type: application/json
+
+{
+    "username": "user1",
+    "password": "password1",
+    "email": "tes12312312",
+    "favoriteTeam": "Arsenal",
+    "avatar": 1
+}
+
+################################################### Sign in Test ###################################################
+
+// Testing with existing account with correct information 
+POST http://localhost:3000/api/auth/signin
+Content-Type: application/json
+
+{
+    "email": "test1@test.com",
+    "password": "password1"
+}
+
+### 
+
+/// Sign in with wrong information should fail sign in 
+POST http://localhost:3000/api/auth/signin
+Content-Type: application/json
+
+{
+    "email": "invalid@test.com",
+    "password": "asdfasdfasdf"
+}
+
+### Refresh Token
+POST http://localhost:3000/api/auth/refresh
+Content-Type: application/json
+
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwiaWF0IjoxNzcxNTU1NTEyLCJleHAiOjE3NzIxNjAzMTJ9.6dkkDhdFI7MNThetBHgPMGIpkQq35fVFtYy9PeMaveE"
+}
+
+
+###
+
+// successful signout
+POST http://localhost:3000/api/auth/signout
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwiZW1haWwiOiJ0ZXN0MUB0ZXN0LmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcxODEwNDY3LCJleHAiOjE3NzE4MTEzNjd9.OxuGP2kfg_e32stvfBta1tT68_fcCDZKncupTA-Du24
+
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwiaWF0IjoxNzcxODEwMzc2LCJleHAiOjE3NzI0MTUxNzZ9.U3z41Tl9kMoNJvMbmgnFmYnfPcy9hfiXJEbALRWV2XA"
+}
+
+###
+
+// Edit profile test 
+# POST http://localhost:3000/api/auth/signup
+# Content-Type: application/json
+
+# {
+#     "username": "user1",
+#     "password": "password1",
+#     "email": "test1@test.com",
+#     "favoriteTeam": "Arsenal",
+#     "avatar": 1
+# }
+
+
+GET http://localhost:3000/api/users/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwiZW1haWwiOiJ0ZXN0MUB0ZXN0LmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcxOTA2MDgyLCJleHAiOjE3NzE5MDY5ODJ9.oo1-IKiBJt-M4ZliONdAzTZaPkLLrVmZjXNp-pFkYb0
+
+###
+
+// Edit profile test 
+PUT http://localhost:3000/api/users/me
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwiZW1haWwiOiJ0ZXN0MUB0ZXN0LmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcxOTA2MDgyLCJleHAiOjE3NzE5MDY5ODJ9.oo1-IKiBJt-M4ZliONdAzTZaPkLLrVmZjXNp-pFkYb0
+
+
+{
+    "username": "new_user_name",
+    "avatar": 4,
+    "favoriteTeam": "My Team"
+}
+
+###
+
+// Change username that already exists
+PUT http://localhost:3000/api/users/me
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwiZW1haWwiOiJ0ZXN0MUB0ZXN0LmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcxOTA2MDgyLCJleHAiOjE3NzE5MDY5ODJ9.oo1-IKiBJt-M4ZliONdAzTZaPkLLrVmZjXNp-pFkYb0
+
+{
+    "username": "user2"
+}

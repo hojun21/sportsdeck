@@ -1,0 +1,315 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  username     String   @unique
+  password     String? // hashed password, null for 3rd party sign up
+  avatar       Int // access avatar profile through an array stores images
+  favoriteTeamId Int?
+  favoriteTeam Team? @relation(fields: [favoriteTeamId], references: [id])
+  role         String   @default("USER") // USER, ADMIN, SYSTEM
+  isBanned     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  // For Oauth 
+  provider   String? // 'google', 'github', etc
+  providerId String? // OAuth provider id
+
+  // Relations
+  threads Thread[]
+  posts   Post[]
+  polls    Poll[]
+  votes Vote[]
+  replies Reply[]
+
+  reportsMade Report[] @relation("ReportsMade")
+  reportsReceived Report[] @relation("ReportsReceived")
+
+  followers Follows[] @relation("Following")
+  following Follows[] @relation("Followers")
+
+  refreshTokens RefreshToken[]
+  appeals       AppealRequest[]
+}
+
+model Forum {
+  id           Int          @id @default(autoincrement())
+  teamId       Int?         @unique 
+  team         Team?        @relation(fields: [teamId], references: [id])
+  threads      Thread[] 
+}
+
+model Report {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  reporterId Int
+  reporter User @relation("ReportsMade", fields: [reporterId], references: [id])
+
+  reportedId Int
+  reported User @relation("ReportsReceived", fields: [reportedId], references: [id])
+
+  explanation String  
+  contentType String // "THREAD", "POST", "REPLY"
+  contentId Int 
+
+  contentTitle String?
+  contentBody String
+  status String @default("PENDING") // "PENDING", "APPROVED", "DISMISSED"
+
+  @@unique([reporterId, contentType, contentId])
+}
+
+// Relationship. User follow User (M : N)
+model Follows {
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Followers", fields: [followerId], references: [id])
+  following User @relation("Following", fields: [followingId], references: [id])
+
+  // PK
+  @@id([followerId, followingId])
+}
+
+model PostHistory {
+  id       Int        @id @default(autoincrement())
+  content  String
+  editedAt DateTime   @default(now())
+
+  postId   Int
+  post     Post       @relation(fields:[postId], references: [id], onDelete: Cascade)
+}
+
+model Poll {
+  id        Int       @id @default(autoincrement())
+
+  question  String 
+  deadline  DateTime  
+  createdAt DateTime  @default(now())
+  isBanned  Boolean   @default(false)
+
+  authorId  Int
+  author    User      @relation(fields: [authorId], references: [id])
+
+  threadId  Int?      @unique
+  thread    Thread?   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  replyId   Int?      @unique
+  reply     Reply?    @relation(fields: [replyId], references: [id], onDelete: Cascade)    
+
+  options   PollOption[]
+}
+
+model PollOption {
+  id        Int       @id @default(autoincrement())
+  text      String
+
+  pollId    Int 
+  poll      Poll      @relation(fields:[pollId], references:[id], onDelete: Cascade)
+
+  votes     Vote[]
+}
+
+model Vote {
+  id        Int         @id @default(autoincrement())
+
+  createdAt DateTime    @default(now())
+
+  userId    Int       
+  user      User        @relation(fields:[userId], references:[id])
+
+  optionId  Int   
+  option    PollOption  @relation(fields:[optionId], references:[id], onDelete: Cascade)
+}
+
+model Thread {
+  id          Int             @id @default(autoincrement())
+  title       String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  isBanned    Boolean         @default(false)
+
+  authorId    Int?
+  author      User?            @relation(fields: [authorId], references: [id])
+
+  forumId     Int[]
+  forum       Forum[]
+
+  matchId     Int? @unique    // for general thread, is set to null
+  match       Match? @relation(fields: [matchId], references: [id])
+
+  tags        ThreadTag[]     // N : M
+  post        Post?           // 1 : 1
+  poll        Poll?           // 1 poll max per thread
+  history     ThreadHistory[] // To store original content of edited Threads
+  
+  openAt      DateTime?
+  closeAt     DateTime?
+}
+
+// User can submit a request to unban themselves
+model AppealRequest {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  reason    String
+  status    String   @default("PENDING") // Either "PENDING", "APPROVED" or "REJECTED"
+  createdAt DateTime @default(now())
+}
+
+model Tag {
+  id      Int         @id @default(autoincrement())
+  name    String      @unique
+  threads ThreadTag[]
+}
+
+// Relational Table that connects Thread and Tag (N : M)
+model ThreadTag {
+
+  threadId  Int
+  tagId     Int
+
+  thread    Thread  @relation(fields:[threadId], references:[id], onDelete: Cascade)
+  tag       Tag     @relation(fields:[tagId], references:[id])
+
+  // PK
+  @@id([threadId, tagId])
+}
+
+model ThreadHistory {
+  id          Int       @id @default(autoincrement())
+  title       String 
+  editedAt    DateTime  @default(now())
+
+  threadId    Int
+  thread      Thread    @relation(fields: [threadId], references:[id], onDelete: Cascade)
+}
+
+model Reply {
+  id          Int       @id @default(autoincrement())
+  content     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isBanned    Boolean   @default(false)
+
+  history     ReplyHistory[]
+
+  sentimentLabel String?
+  sentimentScore Float?
+
+  authorId    Int
+  author      User      @relation(fields: [authorId], references: [id])
+
+  // Replies belong to a post of a thread
+  postId      Int
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  poll        Poll?
+
+  // Nested replies 
+  parentId    Int? 
+  parent      Reply?    @relation("NestedReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Reply[]    @relation("NestedReplies")
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isBanned  Boolean   @default(false)
+  
+  // Stores if edited
+  history  PostHistory[]
+
+  authorId  Int?
+  author    User?      @relation(fields: [authorId], references: [id])
+
+  // Posts belong to a thread
+  threadId Int        @unique
+  thread   Thread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // A post can have multiple replies
+  replies  Reply[]
+
+}
+
+model ReplyHistory {
+  id          Int       @id @default(autoincrement())
+  content     String
+  editedAt    DateTime  @default(now())
+
+  replyId     Int
+  reply       Reply     @relation(fields: [replyId], references: [id], onDelete: Cascade)
+}
+
+// For user's refresh token
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+}
+
+model ContentVerdict {
+  id Int @id @default(autoincrement())
+  contentId Int
+  contentType String // "THREAD", "POST", "REPLY"
+  aiLabel String
+  aiScore Int
+  aiReason String
+  createdAt DateTime @default(now())
+  @@unique([contentType, contentId]) // One verdict per content item
+}
+
+model Team {
+  id Int @id @default(autoincrement())
+  externalId Int @unique
+  name String @unique
+  shortname String 
+  crest String 
+  venue String
+  forum Forum?
+
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+
+  users User[]
+}
+
+model Match {
+  id Int @id @default(autoincrement())
+  externalId Int @unique
+
+  matchDayTime DateTime
+  matchDay Int
+  status String 
+
+  homeTeamId Int 
+  homeTeam Team @relation("HomeTeam", fields: [homeTeamId], references: [id])
+
+  awayTeamId Int 
+  awayTeam Team @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  homeScore Int?
+  awayScore Int?
+
+  thread    Thread?
+}

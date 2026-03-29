@@ -1,0 +1,12 @@
+Commands I used to set up project
+
+npx create-next-app@latest sportsdeck
+
+npm install prisma@6.17.0 @prisma/client@6.17.0
+
+npx prisma init --datasource-provider sqlite
+
+npm install bcryptjs jsonwebtoken
+
+npm install --save-dev @types/bcryptjs @types/jsonwebtoken
+
