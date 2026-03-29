@@ -523,7 +523,7 @@ export default function ProfilePage({
                       followers.map((item) => (
                         <img
                           onClick={() =>
-                            redirect("/profile/" + item.followerId)
+                            router.push("/profile/" + item.followerId)
                           }
                           title={item.follower.username}
                           key={"follower" + item.followerId}
@@ -559,7 +559,7 @@ export default function ProfilePage({
                       following.map((item) => (
                         <img
                           onClick={() =>
-                            redirect("/profile/" + item.followingId)
+                            router.push("/profile/" + item.followingId)
                           }
                           title={item.following.username}
                           key={"following" + item.followingId}
@@ -638,7 +638,7 @@ export default function ProfilePage({
                       <div
                         key={"Thread" + item.id}
                         onClick={() =>
-                          redirect(
+                          router.push(
                             "/community/" +
                               item.forumId![0] +
                               "/threads/" +
@@ -659,7 +659,7 @@ export default function ProfilePage({
                       <div
                         key={"Reply" + item.id}
                         onClick={() =>
-                          redirect(
+                          router.push(
                             "/community/" +
                               item.post.thread?.forumId[0] +
                               "/threads/" +
