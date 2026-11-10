@@ -1,57 +1,43 @@
 # SportsDeck
 
-A community web app for Premier League fans. Follow live matches and standings, talk in team forums, vote in polls, and read an AI-generated daily match digest.
+A community site for Premier League fans: live scores and standings, club forums, polls, and AI-powered moderation. Built by a team of three for CSC309 (Programming on the Web) at the University of Toronto.
 
-Built by a team of three for **CSC309 (Programming on the Web) at the University of Toronto**.
+**Live:** https://sportsdeck.onrender.com <sub>(free hosting, so the first load can take about a minute)</sub>
 
-**Live demo:** https://sportsdeck-YOURNAME.onrender.com
-<sub>Hosted on a free tier. The first load can take about a minute while the server wakes up.</sub>
+**Stack:** Next.js 16 · React 19 · TypeScript · PostgreSQL · Prisma · NextAuth · JWT · Tailwind · Docker
 
-## Features
+## What I Built
 
-- **Matches and standings:** live Premier League data from [football-data.org](https://www.football-data.org), refreshed automatically every 6 hours
-- **Forums:** a general forum plus one per team, with threads, replies, and polls
-- **Accounts:** email/password sign-up or one-click Google sign-in, profiles, and a favourite team
-- **AI features:** content moderation and sentiment analysis (Hugging Face), translation of posts, and a daily digest written by Gemini
-- **Admin tools:** review reported content, ban users, and handle appeals
+### Authentication (owned end to end)
+- JWT auth with a **15-minute access token** and a **7-day refresh token**. The refresh token is stored server-side so a sign-out actually ends the session.
+- Refresh token kept in an `httpOnly`, `SameSite=Strict` cookie, out of reach of page scripts.
+- A `fetchWithAuth` wrapper that silently refreshes an expired token and retries the request. Users never see a random logout.
+- **Google sign-in** with NextAuth, issuing the same JWTs as email sign-in, so the rest of the API works the same for both kinds of user.
+- Role-based access control (user / admin) on every protected route, and bcrypt password hashing.
 
-## Tech Stack
+### Threads, Replies, and Polls
+- Database schema, REST API, and UI for threads, nested replies, tags, and polls.
+- Edit history: every edit keeps the previous version.
+- Search by title, author, club, and tag.
+- Thread and opening post are created in **one transaction**, so a failed write never leaves an empty thread.
+- AI moderation runs **in the background** after a post is saved, so posting never waits on a third-party model.
 
-Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · Prisma · PostgreSQL · NextAuth · JWT · Docker
+### Key Decisions
+| Decision | Why |
+|---|---|
+| Access + refresh tokens instead of one long-lived JWT | A single JWT can't be revoked on sign-out or ban |
+| JWT instead of server sessions | No database lookup on every request; revocation is only needed at refresh time |
+| NextAuth only for the Google handshake | Avoids running two parallel auth systems |
+| Soft-hide banned content instead of deleting it | Keeps evidence for reports and ban appeals |
 
-## My Contribution: Authentication
+## Other Features (team)
+Live match data from football-data.org, refreshed every 6 hours · translation and sentiment analysis with Hugging Face · daily match digest written by Gemini · admin dashboard for reports, bans, and appeals
 
-I designed and built the authentication system that every protected page and API route relies on.
-
-**JWT access and refresh tokens**
-- On sign-in, the server issues two tokens:
-  - a short-lived **access token** (15 min) that carries the user's id, email, and role
-  - a long-lived **refresh token** (7 days)
-- The access token is sent as `Authorization: Bearer <token>` on API calls.
-- The refresh token is stored in the database and in an `httpOnly`, `SameSite=Strict` cookie, so page scripts cannot read it.
-- A client helper, `fetchWithAuth`, handles expired access tokens. When a request returns 401, it gets a new access token from `/api/auth/refresh` and retries the request. If the refresh token is also invalid, it signs the user out.
-- Signing out deletes the refresh token from the database and clears the cookie, so the session ends on the server as well.
-- Passwords are hashed with bcrypt.
-
-**Role-based access control**
-- Helper functions `authorizeUser` and `authorizeAdmin` protect the API routes.
-- A request without a valid access token gets `401 Unauthorized`. A regular user calling an admin route gets `403 Forbidden`.
-
-**Google OAuth (NextAuth)**
-- Users can sign in with their Google account. On the first sign-in, the app creates an account for them and gives it a unique username.
-- Google users then receive the same JWT access and refresh tokens as email users, so the rest of the app treats both kinds of user the same way.
-
-Relevant code: `src/lib/jwt.ts`, `src/lib/auth.ts`, `src/lib/fetchWithAuth.ts`, `src/app/api/auth/`, `src/app/api/nextauth/`
-
-## Running Locally
-
-You need Docker, plus API keys for football-data.org, Gemini, Hugging Face, and Google OAuth.
-
+## Run Locally
 ```bash
 cd sportsdeck
-cp .env.example .env              # then fill in your keys
-docker compose up -d --build      # starts the app and Postgres
-docker compose exec app npm run seed   # first run only: loads teams, users, and sample posts
+cp .env.example .env                    # add your API keys
+docker compose up -d --build
+docker compose exec app npm run seed    # first run only
 ```
-
-Open http://localhost:3000. To stop everything, run `docker compose down`.
+Open http://localhost:3000
